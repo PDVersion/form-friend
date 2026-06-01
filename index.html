@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Form Friend — ServiceM8 .sm8f editor</title>
+
+    <!-- Tailwind via CDN (play build — fine for the MVP; see README for the production note). -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!--
+      JSZip via CDN, version pinned. No SRI hash is set because it could not be
+      computed in the build environment; adding a wrong hash would break loading.
+      See README "Hardening" for vendoring / adding integrity.
+    -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+
+  <body class="bg-slate-100 text-slate-800 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+      <header class="mb-6">
+        <h1 class="text-2xl font-bold">Form Friend</h1>
+        <p class="text-slate-500">
+          Parse, mass-edit (via an LLM), and repackage ServiceM8
+          <code>.sm8f</code> forms — entirely in your browser.
+        </p>
+      </header>
+
+      <!-- Step 1: ingest -->
+      <section
+        id="dropzone"
+        class="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center transition"
+      >
+        <p class="font-medium">Drop a <code>.sm8f</code> file here</p>
+        <p class="text-sm text-slate-500">or click to choose a file</p>
+        <input id="file-input" type="file" accept=".sm8f" class="hidden" />
+      </section>
+
+      <!-- Shared status / validation panel -->
+      <div id="status" class="hidden mt-4"></div>
+
+      <!-- Workspace (revealed after a file loads) -->
+      <main id="workspace" class="hidden mt-6 space-y-8">
+        <!-- Step 2: display -->
+        <section>
+          <div id="form-info" class="mb-3"></div>
+          <div id="question-list" class="space-y-3"></div>
+        </section>
+
+        <!-- Step 3: export for LLM -->
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold">Export for LLM</h2>
+            <div class="flex gap-2">
+              <button
+                id="export-btn"
+                class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700"
+              >
+                Generate XML
+              </button>
+              <button
+                id="copy-btn"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+          <textarea
+            id="xml-output"
+            readonly
+            class="mt-3 h-48 w-full rounded-md border border-slate-200 bg-slate-50 p-2 font-mono text-xs"
+            placeholder="Generated XML appears here…"
+          ></textarea>
+        </section>
+
+        <!-- Step 4: import + validate + repackage -->
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold">Import edited XML</h2>
+            <button
+              id="import-btn"
+              class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              Validate &amp; Repackage
+            </button>
+          </div>
+          <textarea
+            id="xml-input"
+            class="mt-3 h-48 w-full rounded-md border border-slate-200 p-2 font-mono text-xs"
+            placeholder="Paste the LLM-edited XML here…"
+          ></textarea>
+
+          <div id="download-section" class="hidden mt-3">
+            <a
+              id="download-link"
+              class="inline-block rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900"
+            >
+              ⬇ Download rebuilt .sm8f
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <footer class="mt-10 text-center text-xs text-slate-400">
+        Client-side only · no data leaves your browser
+      </footer>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

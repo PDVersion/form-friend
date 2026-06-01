@@ -1,0 +1,13 @@
+# Dependencies (none expected — this is a no-build static site)
+node_modules/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local scratch / test output
+tmp/
+*.log

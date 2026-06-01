@@ -1,0 +1,4 @@
+<form id="ccdd07a5-09c8-426d-b930-243cabc213cb" name="(DRAFT) Pool Service Form 2027 FY">
+<question id="0f020bfc-3267-4519-a289-243ca2a561db" type="Multiple Choice" mandatory="true" sort="2"><name>Services carried out?</name><details></details><choices><choice>Services carried out</choice><choice>Partial service</choice></choices><conditions method="AND"></conditions></question>
+<question id="adae0b4c-5af4-4f69-8ac0-243ca011cf1b" type="Multiple Choice" mandatory="true" sort="8"><name>Chemistry Test</name><details>Have you completed a water test?</details><choices><choice>Yes</choice><choice>No</choice></choices><conditions method="AND"><condition ref="deadbeef-0000-4000-8000-000000000000" op="CON" value="No"/></conditions></question>
+</form>

@@ -1,0 +1,11 @@
+{
+  "name": "form-friend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Client-side ServiceM8 .sm8f parser/editor/repackager optimised for LLM-assisted mass editing.",
+  "scripts": {
+    "test": "node test/checks.mjs",
+    "serve": "python3 -m http.server 8000"
+  }
+}

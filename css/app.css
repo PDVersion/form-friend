@@ -1,0 +1,14 @@
+/* app.css — small custom styles layered on top of Tailwind (CDN).
+   Keep this minimal; most styling is done with Tailwind utility classes. */
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.25rem;
+}
+
+textarea {
+  resize: vertical;
+}
