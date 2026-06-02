@@ -12,3 +12,12 @@ code {
 textarea {
   resize: vertical;
 }
+
+/* Give the XML editor a comfortable minimum and let it grow with the viewport
+   so the right column tracks the left without excessive scrolling. */
+#xml-editor {
+  min-height: 24rem;
+  height: calc(100vh - 16rem);
+  max-height: 80vh;
+  resize: vertical;
+}
