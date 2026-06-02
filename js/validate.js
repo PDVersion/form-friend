@@ -36,6 +36,9 @@ export function validateImport(parsed) {
     if (q.method && q.method !== "AND" && q.method !== "OR") {
       errors.push(`${label} has an invalid condition method "${q.method}" (expected AND or OR).`);
     }
+    if ((q.conditions || []).length > 3) {
+      warnings.push(`${label} has more than 3 conditions; excess will be capped to 3 on output.`);
+    }
 
     for (const c of q.conditions || []) {
       if (c.ref) {

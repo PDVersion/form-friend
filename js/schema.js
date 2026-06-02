@@ -51,8 +51,8 @@ export const KNOWN_TYPES = [
   "Photo",
 ];
 
-// Condition operators seen in the wild.
-export const KNOWN_OPERATORS = ["CON", "NCON", "EQ", "NEQ"];
+// Condition operators seen in the wild (GT/LT added alongside the original four).
+export const KNOWN_OPERATORS = ["CON", "NCON", "EQ", "NEQ", "GT", "LT"];
 
 // Inner keys fully managed by the editor (everything else inside the blob is preserved as-is).
 const MANAGED_DATA_KEYS = new Set([
@@ -116,7 +116,7 @@ export function buildFieldData(vm, originalData = {}) {
   data[DATA.mandatory] = !!vm.mandatory;
   if (vm.choices && vm.choices.length) data[DATA.choices] = vm.choices.slice();
 
-  const conds = (vm.conditions || []).map((c) => ({
+  const conds = (vm.conditions || []).slice(0, COND_SLOTS).map((c) => ({
     [COND.ref]: c.ref || "",
     [COND.op]: c.op || "",
     [COND.value]: c.value || "",
@@ -149,6 +149,71 @@ export function innerSignature(vm) {
       value: c.value || "",
     })),
   });
+}
+
+// Returns a human-readable list of reasons why a condition c is broken/incomplete.
+// ctx: { position (1-based number of the question that owns this condition),
+//         knownOperators, idSet (Set of all valid UUIDs), idToNumber (Map uuid→number) }
+// Returns [] when the condition is well-formed.
+export function conditionIssues(c, { position, knownOperators, idSet, idToNumber }) {
+  const issues = [];
+  if (!c.ref && !c.op && !c.value) return issues; // all-empty (already filtered by parseField)
+
+  if (!c.ref) {
+    issues.push("no question selected");
+  } else {
+    if (!idSet.has(c.ref)) {
+      issues.push("references a missing question");
+    } else {
+      const refNum = idToNumber.get(c.ref);
+      if (refNum !== undefined && refNum >= position) {
+        issues.push("references a later or the same question");
+      }
+    }
+  }
+
+  if (c.ref && !c.op) {
+    issues.push("no operator");
+  }
+
+  if (c.op && !knownOperators.includes(c.op)) {
+    issues.push(`unknown operator "${c.op}"`);
+  }
+
+  if (c.ref && c.op && c.value === "") {
+    issues.push("empty value");
+  }
+
+  return issues;
+}
+
+// Build the form-level metadata object for a brand-new form (XML-build pathway).
+// Mirrors the key order/defaults seen in real .sm8f samples.
+export function buildBlankFormMeta({ uuid, name, documentTemplateUuid = "", stamp }) {
+  return {
+    uuid,
+    create_login: "0",
+    create_by_staff_uuid: "",
+    edit_by_staff_uuid: "",
+    create_date: stamp,
+    edit_login: "0",
+    edit_date: stamp,
+    active: "1",
+    vendor_uuid: "",
+    document_template_uuid: documentTemplateUuid,
+    name: name || "",
+    badge_name: "",
+    is_sample_form: "0",
+    sample_form_id: "0",
+    can_be_used_independently: "0",
+    badge_mandatory_state: "0",
+    prevent_form_from_export: "0",
+    store_item_uuid: "",
+    network_origin_form_uuid: "",
+    network_origin_form_etag: "",
+    template_fields_json: "[]",
+    is_locked: "0",
+  };
 }
 
 // Sort a list of vms by numeric sort_order (stable, ascending).
