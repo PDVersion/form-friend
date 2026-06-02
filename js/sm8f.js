@@ -32,8 +32,9 @@ export async function extractSm8f(file) {
 }
 
 // Repackage: copy every original entry verbatim, swap in the new form.json,
-// and return a .sm8f Blob. The template.docx content is preserved exactly.
-export async function buildSm8f(formObj, originalZip) {
+// add any extraFiles (e.g. { "template.docx": blob } for the xml-build pathway),
+// and return a .sm8f Blob. The template.docx from the original zip is preserved exactly.
+export async function buildSm8f(formObj, originalZip, extraFiles = {}) {
   if (typeof JSZip === "undefined") {
     throw new Error("JSZip failed to load (check your network / CDN).");
   }
@@ -48,6 +49,10 @@ export async function buildSm8f(formObj, originalZip) {
   }
 
   out.file("form.json", serializeFormJson(formObj));
+
+  for (const [name, blob] of Object.entries(extraFiles)) {
+    out.file(name, blob);
+  }
 
   return out.generateAsync({
     type: "blob",

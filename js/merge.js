@@ -13,6 +13,7 @@ import {
   parseField,
   buildFieldData,
   innerSignature,
+  buildBlankFormMeta,
 } from "./schema.js";
 import { generateUuid, isUuid } from "./uuid.js";
 
@@ -22,6 +23,21 @@ function nowStamp(d = new Date()) {
     `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
     `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
   );
+}
+
+// Build a minimal blank formObj (no fields) for the XML-build pathway.
+// Every question from the pasted XML becomes a brand-new question via mergeForm.
+export function buildBlankForm({ name, documentTemplateUuid = "" }) {
+  const stamp = nowStamp();
+  return {
+    [KEYS.form]: buildBlankFormMeta({
+      uuid: generateUuid(),
+      name: name || "",
+      documentTemplateUuid,
+      stamp,
+    }),
+    [KEYS.fields]: [],
+  };
 }
 
 // Assign a fresh v4 UUID to any imported question that lacks a valid one.

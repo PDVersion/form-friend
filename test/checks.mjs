@@ -14,15 +14,19 @@ import {
   KEYS,
   FIELD,
   DATA,
+  KNOWN_OPERATORS,
+  COND_SLOTS,
   parseField,
   buildFieldData,
   innerSignature,
   sortByOrder,
+  conditionIssues,
+  buildBlankFormMeta,
 } from "../js/schema.js";
 import { phpJsonStringify, serializeFormJson } from "../js/serialize.js";
 import { buildFormXml } from "../js/xml.js";
 import { validateImport } from "../js/validate.js";
-import { ensureUuids, mergeForm } from "../js/merge.js";
+import { ensureUuids, mergeForm, buildBlankForm } from "../js/merge.js";
 import { generateUuid, isUuid } from "../js/uuid.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -162,6 +166,103 @@ ok("new question's blob pads conditions to 3 slots", Array.isArray(createdData[D
 console.log("\n[9] innerSignature changes when content is edited");
 const editedVm = { ...vms.find((v) => v.type === "Number"), details: "EDITED help text" };
 ok("edited inner content changes signature", innerSignature(editedVm) !== innerSignature(vms.find((v) => v.type === "Number")));
+
+console.log("\n[10] KNOWN_OPERATORS includes GT and LT");
+ok("GT in KNOWN_OPERATORS", KNOWN_OPERATORS.includes("GT"));
+ok("LT in KNOWN_OPERATORS", KNOWN_OPERATORS.includes("LT"));
+ok("all six operators present", KNOWN_OPERATORS.length >= 6,
+  `got ${KNOWN_OPERATORS.length}: ${KNOWN_OPERATORS.join(",")}`);
+const sampleValidation2 = validateImport({ questions: vms });
+ok("sample still validates ok with extended operator list", sampleValidation2.ok, sampleValidation2.errors.join("; "));
+
+console.log("\n[11] buildFieldData caps conditions at COND_SLOTS");
+const overflowVm = { ...vms[0], conditions: [
+  { ref: vms[0].uuid, op: "EQ", value: "a" },
+  { ref: vms[0].uuid, op: "EQ", value: "b" },
+  { ref: vms[0].uuid, op: "EQ", value: "c" },
+  { ref: vms[0].uuid, op: "EQ", value: "d" },
+] };
+const cappedData = buildFieldData(overflowVm, {});
+ok("4-condition vm is capped to 3 slots", cappedData[DATA.conditions].length === COND_SLOTS,
+  `got ${cappedData[DATA.conditions].length}`);
+ok("capped slots are still padded to COND_SLOTS", cappedData[DATA.conditions].length === 3);
+ok("method preserved through cap", cappedData[DATA.method] === overflowVm.method);
+
+console.log("\n[12] conditionIssues detects broken conditions");
+const allUuids = new Set(vms.map(v => v.uuid));
+const numMap = new Map(vms.map((v, i) => [v.uuid, i + 1]));
+const ctx = { position: 10, knownOperators: KNOWN_OPERATORS, idSet: allUuids, idToNumber: numMap };
+
+const validCond = { ref: vms[0].uuid, op: "EQ", value: "yes" };
+ok("valid condition has no issues", conditionIssues(validCond, ctx).length === 0,
+  conditionIssues(validCond, ctx).join("; "));
+
+const noRef = { ref: "", op: "CON", value: "x" };
+ok("no-ref condition flagged", conditionIssues(noRef, ctx).some(s => s.includes("no question")));
+
+const noOp = { ref: vms[0].uuid, op: "", value: "x" };
+ok("no-op condition flagged", conditionIssues(noOp, ctx).some(s => s.includes("no operator")));
+
+const deadRef = { ref: "deadbeef-0000-4000-8000-000000000000", op: "EQ", value: "x" };
+ok("dangling ref flagged", conditionIssues(deadRef, ctx).some(s => s.includes("missing question")));
+
+const emptyVal = { ref: vms[0].uuid, op: "EQ", value: "" };
+ok("empty value flagged", conditionIssues(emptyVal, ctx).some(s => s.includes("empty value")));
+
+const unknownOp = { ref: vms[0].uuid, op: "WEIRD", value: "x" };
+ok("unknown operator flagged", conditionIssues(unknownOp, ctx).some(s => s.includes("unknown operator")));
+
+// Forward reference: vms[0] is question 1; position=1 → same question
+const selfRef = { ref: vms[0].uuid, op: "EQ", value: "x" };
+const ctxSelf = { ...ctx, position: 1 };
+ok("self-reference flagged", conditionIssues(selfRef, ctxSelf).some(s => s.includes("later or the same")));
+
+// Forward reference: vms[9] is question 10; position=5 → forward
+const forwardRef = { ref: vms[9].uuid, op: "EQ", value: "x" };
+const ctxFwd = { ...ctx, position: 5 };
+ok("forward reference flagged", conditionIssues(forwardRef, ctxFwd).some(s => s.includes("later or the same")));
+
+console.log("\n[13] buildBlankFormMeta and buildBlankForm");
+const stamp = "2026-06-01 12:00:00";
+const meta = buildBlankFormMeta({ uuid: "test-uuid", name: "My Form", documentTemplateUuid: "", stamp });
+ok("buildBlankFormMeta has uuid", meta.uuid === "test-uuid");
+ok("buildBlankFormMeta has name", meta.name === "My Form");
+ok("buildBlankFormMeta document_template_uuid defaults to empty", meta.document_template_uuid === "");
+ok("buildBlankFormMeta has expected keys", [
+  "uuid", "create_login", "create_by_staff_uuid", "edit_by_staff_uuid",
+  "create_date", "edit_login", "edit_date", "active", "vendor_uuid",
+  "document_template_uuid", "name", "badge_name", "is_sample_form", "sample_form_id",
+  "can_be_used_independently", "badge_mandatory_state", "prevent_form_from_export",
+  "store_item_uuid", "network_origin_form_uuid", "network_origin_form_etag",
+  "template_fields_json", "is_locked"
+].every(k => Object.prototype.hasOwnProperty.call(meta, k)));
+
+const blank = buildBlankForm({ name: "Test Form", documentTemplateUuid: "" });
+ok("buildBlankForm has form key", !!blank[KEYS.form]);
+ok("buildBlankForm has empty fields", Array.isArray(blank[KEYS.fields]) && blank[KEYS.fields].length === 0);
+ok("buildBlankForm form has a UUID", isUuid(blank[KEYS.form].uuid));
+ok("buildBlankForm form template is empty for None", blank[KEYS.form].document_template_uuid === "");
+
+// Merge parsed questions into a blank form and verify serialization
+const simpleQ = [{
+  uuid: generateUuid(),
+  type: "Text",
+  name: "Your name",
+  details: "",
+  mandatory: false,
+  choices: [],
+  conditions: [],
+  method: "AND",
+  sort: "1",
+}];
+const builtForm = mergeForm(blank, simpleQ);
+const serialized = serializeFormJson(builtForm);
+ok("built form serializes to valid JSON", (() => { try { JSON.parse(serialized); return true; } catch { return false; } })());
+const roundTripped = JSON.parse(serialized);
+ok("built form has 1 field after merge", roundTripped[KEYS.fields].length === 1,
+  `got ${roundTripped[KEYS.fields].length}`);
+ok("built form.document_template_uuid survives serialization",
+  roundTripped[KEYS.form].document_template_uuid === "");
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

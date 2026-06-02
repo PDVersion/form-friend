@@ -1,11 +1,14 @@
-// ui.js — render the parsed questions into the page. Intentionally minimal
-// (the user will refine the visual design later).
+// ui.js — render the parsed questions into the page.
+
+import { conditionIssues, KNOWN_OPERATORS } from "./schema.js";
 
 const OP_LABELS = {
   CON: "contains",
   NCON: "does not contain",
   EQ: "equals",
   NEQ: "does not equal",
+  GT: "greater than",
+  LT: "less than",
 };
 
 function el(tag, className, text) {
@@ -15,16 +18,22 @@ function el(tag, className, text) {
   return node;
 }
 
-// vms: sorted view-models. idToName: Map(uuid -> question name) for readable refs.
-export function renderQuestions(container, vms, idToName) {
+// vms: sorted view-models.
+// idToName: Map(uuid -> question name) for readable refs.
+// idToNumber: Map(uuid -> 1-based position) for numbered refs.
+// onRemoveCondition(vm, condIndex): called when the user clicks Remove on a broken condition.
+export function renderQuestions(container, vms, idToName, idToNumber, onRemoveCondition) {
   container.innerHTML = "";
 
+  const idSet = new Set(idToName.keys());
+
   vms.forEach((vm, index) => {
+    const position = index + 1;
     const card = el("div", "border border-slate-200 rounded-lg p-4 bg-white shadow-sm");
 
     const head = el("div", "flex items-start justify-between gap-3");
     const title = el("h3", "font-semibold text-slate-800");
-    title.textContent = `${index + 1}. ${vm.name || "(untitled)"}`;
+    title.textContent = `${position}. ${vm.name || "(untitled)"}`;
     head.appendChild(title);
 
     const badges = el("div", "flex items-center gap-2 shrink-0");
@@ -50,13 +59,44 @@ export function renderQuestions(container, vms, idToName) {
 
     if (vm.conditions && vm.conditions.length) {
       const cond = el("div", "mt-3 text-xs text-slate-500 border-l-2 border-amber-300 pl-2");
-      const header = el("div", "font-medium text-amber-700", `Show only if (${vm.method}):`);
+      const header = el("div", "font-medium text-amber-700", `Skip Question If (${vm.method}):`);
       cond.appendChild(header);
-      for (const c of vm.conditions) {
+
+      for (let ci = 0; ci < vm.conditions.length; ci++) {
+        const c = vm.conditions[ci];
+        const refNum = idToNumber ? idToNumber.get(c.ref) : undefined;
         const refName = idToName.get(c.ref) || c.ref || "(none)";
         const opText = OP_LABELS[c.op] || c.op || "?";
-        cond.appendChild(el("div", "", `• "${refName}" ${opText} "${c.value}"`));
+        const numPrefix = refNum !== undefined ? `(${refNum}) ` : "";
+
+        const issues = conditionIssues(c, {
+          position,
+          knownOperators: KNOWN_OPERATORS,
+          idSet,
+          idToNumber: idToNumber || new Map(),
+        });
+
+        if (issues.length > 0) {
+          const row = el("div", "flex items-start justify-between gap-1 mt-0.5");
+          const text = el(
+            "div",
+            "text-rose-500",
+            `⚠ ${numPrefix}"${refName}" ${opText} "${c.value}" — ${issues.join("; ")}`
+          );
+          row.appendChild(text);
+          if (onRemoveCondition) {
+            const btn = el("button", "ml-2 shrink-0 text-rose-400 hover:text-rose-600 text-xs underline cursor-pointer", "Remove");
+            btn.type = "button";
+            const captureCi = ci;
+            btn.addEventListener("click", () => onRemoveCondition(vm, captureCi));
+            row.appendChild(btn);
+          }
+          cond.appendChild(row);
+        } else {
+          cond.appendChild(el("div", "", `• ${numPrefix}"${refName}" ${opText} "${c.value}"`));
+        }
       }
+
       card.appendChild(cond);
     }
 
