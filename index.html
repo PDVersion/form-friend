@@ -23,7 +23,7 @@
   </head>
 
   <body class="bg-slate-100 text-slate-800 min-h-screen">
-    <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="max-w-7xl mx-auto px-4 py-8">
       <header class="mb-6">
         <h1 class="text-2xl font-bold">Form Friend</h1>
         <p class="text-slate-500">
@@ -32,136 +32,131 @@
         </p>
       </header>
 
-      <!-- Step 1: ingest -->
-      <section
-        id="dropzone"
-        class="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center transition"
-      >
-        <p class="font-medium">Drop a <code>.sm8f</code> file here</p>
-        <p class="text-sm text-slate-500">or click to choose a file</p>
-        <input id="file-input" type="file" accept=".sm8f" class="hidden" />
-      </section>
+      <!-- Shared status / validation panel (full-width above the split) -->
+      <div id="status" class="hidden mb-4"></div>
 
-      <!-- Step 1b: paste XML directly (no .sm8f needed) -->
-      <div class="mt-4 text-center">
-        <button
-          id="xml-mode-btn"
-          class="text-sm text-slate-500 underline hover:text-slate-700"
-        >Have XML already? Build a .sm8f without a template →</button>
-      </div>
+      <!-- Split-screen grid — stacks on small screens, side-by-side on lg+ -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-      <section id="xml-build-panel" class="hidden mt-4 rounded-xl border border-slate-200 bg-white p-4">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="text-lg font-semibold">Build from XML</h2>
-          <button
-            id="xml-build-btn"
-            class="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
-          >Build .sm8f</button>
-        </div>
-        <textarea
-          id="xml-build-input"
-          class="mt-3 h-48 w-full rounded-md border border-slate-200 p-2 font-mono text-xs"
-          placeholder="Paste your form XML here…"
-        ></textarea>
-        <div class="mt-3">
-          <p class="text-sm font-medium text-slate-700 mb-1">Optional: PDF template (.docx)</p>
-          <input id="xml-docx-input" type="file" accept=".docx" class="text-sm text-slate-600" />
-          <p class="mt-1 text-xs text-slate-400">Leave blank for form template "None" — SM8 will not generate a PDF for this form.</p>
-        </div>
-      </section>
+        <!-- ═══════════════════════ LEFT COLUMN ═══════════════════════ -->
+        <div id="left-col">
+          <!-- Step 1: ingest -->
+          <section
+            id="dropzone"
+            class="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center transition"
+          >
+            <p class="font-medium">Drop a <code>.sm8f</code> file here</p>
+            <p class="text-sm text-slate-500">or click to choose a file</p>
+            <input id="file-input" type="file" accept=".sm8f" class="hidden" />
+          </section>
 
-      <!-- Shared status / validation panel -->
-      <div id="status" class="hidden mt-4"></div>
-
-      <!-- Workspace (revealed after a file loads) -->
-      <main id="workspace" class="hidden mt-6 space-y-8">
-        <!-- Step 2: display -->
-        <section>
-          <div class="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Form Details</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label for="form-name-input" class="block text-xs font-medium text-slate-700 mb-1">Form name</label>
-                <input
-                  id="form-name-input"
-                  type="text"
-                  class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-                  placeholder="Form name"
-                />
+          <!-- Workspace (revealed after a file loads) -->
+          <main id="workspace" class="hidden mt-6 space-y-6">
+            <!-- Form details -->
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Form Details</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="form-name-input" class="block text-xs font-medium text-slate-700 mb-1">Form name</label>
+                  <input
+                    id="form-name-input"
+                    type="text"
+                    class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    placeholder="Form name"
+                  />
+                </div>
+                <div>
+                  <label for="form-badge-input" class="block text-xs font-medium text-slate-700 mb-1">
+                    Badge name
+                    <span class="ml-1 font-normal text-slate-400">(short label on SM8 badge widget)</span>
+                  </label>
+                  <input
+                    id="form-badge-input"
+                    type="text"
+                    class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    placeholder="Badge name"
+                  />
+                </div>
               </div>
-              <div>
-                <label for="form-badge-input" class="block text-xs font-medium text-slate-700 mb-1">
-                  Badge name
-                  <span class="ml-1 font-normal text-slate-400">(short label on SM8 badge widget)</span>
-                </label>
-                <input
-                  id="form-badge-input"
-                  type="text"
-                  class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-                  placeholder="Badge name"
-                />
+              <div id="form-info" class="mt-2 text-xs text-slate-400"></div>
+            </div>
+
+            <div id="template-banner" class="hidden"></div>
+            <div id="question-list" class="space-y-3"></div>
+          </main>
+        </div>
+
+        <!-- ═══════════════════════ RIGHT COLUMN ═══════════════════════ -->
+        <div id="right-col" class="lg:sticky lg:top-4">
+          <section class="rounded-xl border border-slate-200 bg-white p-4">
+
+            <!-- Header — text changes based on state -->
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <h2 id="xml-panel-title" class="text-lg font-semibold text-slate-400">XML editor</h2>
+
+              <!-- Controls shown only when a form is loaded -->
+              <div id="xml-loaded-controls" class="hidden flex gap-2 flex-wrap justify-end">
+                <button
+                  id="export-btn"
+                  class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+                  title="Regenerate the XML from the current form state"
+                >Regenerate XML</button>
+                <button
+                  id="copy-btn"
+                  class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+                >Copy</button>
+                <button
+                  id="validate-btn"
+                  class="rounded-md border border-amber-400 text-amber-700 px-3 py-1.5 text-sm font-medium hover:bg-amber-50"
+                  title="Check XML formatting and conversion issues without modifying the form"
+                >Validate</button>
+                <button
+                  id="import-btn"
+                  class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                  title="Apply the XML to the form, validate, and rebuild the .sm8f"
+                >Validate &amp; Repackage</button>
               </div>
             </div>
-            <div id="form-info" class="mt-2 text-xs text-slate-400"></div>
-          </div>
-          <div id="template-banner" class="hidden"></div>
-          <div id="question-list" class="space-y-3"></div>
-        </section>
 
-        <!-- Step 3: export for LLM -->
-        <section class="rounded-xl border border-slate-200 bg-white p-4">
-          <div class="flex items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold">Export for LLM</h2>
-            <div class="flex gap-2">
+            <!-- The single shared XML textarea -->
+            <textarea
+              id="xml-editor"
+              class="h-[32rem] w-full rounded-md border border-slate-200 p-2 font-mono text-xs"
+              spellcheck="false"
+            ></textarea>
+
+            <!-- Empty-state: build without a template -->
+            <div id="xml-build-controls" class="mt-3 space-y-3">
+              <p class="text-sm text-slate-500">
+                Have XML already?
+                <span class="font-medium text-slate-700">Build a <code>.sm8f</code> without a template →</span>
+                paste your XML above, then:
+              </p>
+              <div>
+                <p class="text-sm font-medium text-slate-700 mb-1">Optional: PDF template (.docx)</p>
+                <input id="xml-docx-input" type="file" accept=".docx" class="text-sm text-slate-600" />
+                <p class="mt-1 text-xs text-slate-400">Leave blank for form template "None" — SM8 will not generate a PDF for this form.</p>
+              </div>
               <button
-                id="export-btn"
-                class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700"
-              >
-                Generate XML
-              </button>
-              <button
-                id="copy-btn"
-                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
-              >
-                Copy
-              </button>
+                id="build-btn"
+                class="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
+              >Build .sm8f from XML</button>
             </div>
-          </div>
-          <textarea
-            id="xml-output"
-            readonly
-            class="mt-3 h-48 w-full rounded-md border border-slate-200 bg-slate-50 p-2 font-mono text-xs"
-            placeholder="Generated XML appears here…"
-          ></textarea>
-        </section>
 
-        <!-- Step 4: import + validate + repackage -->
-        <section class="rounded-xl border border-slate-200 bg-white p-4">
-          <div class="flex items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold">Import edited XML</h2>
-            <button
-              id="import-btn"
-              class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-            >
-              Validate &amp; Repackage
-            </button>
-          </div>
-          <textarea
-            id="xml-input"
-            class="mt-3 h-48 w-full rounded-md border border-slate-200 p-2 font-mono text-xs"
-            placeholder="Paste the LLM-edited XML here…"
-          ></textarea>
+            <!-- Download (revealed after repackage) -->
+            <div id="download-section" class="hidden mt-3">
+              <a
+                id="download-link"
+                class="inline-block rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900"
+              >
+                ⬇ Download rebuilt .sm8f
+              </a>
+            </div>
 
-          <div id="download-section" class="hidden mt-3">
-            <a
-              id="download-link"
-              class="inline-block rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900"
-            >
-              ⬇ Download rebuilt .sm8f
-            </a>
-          </div>
-        </section>
-      </main>
+          </section>
+        </div>
+
+      </div><!-- end split grid -->
 
       <footer class="mt-10 text-center text-xs text-slate-400">
         Client-side only · no data leaves your browser

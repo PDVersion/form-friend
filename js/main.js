@@ -1,5 +1,5 @@
 // main.js — entry point. Wires the DOM to the workflow:
-// ingest -> display -> export XML -> import XML -> validate -> repackage.
+// ingest -> display -> live XML editor (export + import unified) -> validate -> repackage.
 // Second pathway: paste XML directly -> build .sm8f from scratch.
 
 import { state, resetState } from "./state.js";
@@ -72,6 +72,28 @@ function updateTemplateBanner() {
   }
 }
 
+// Regenerate the XML editor box from current state (left → right sync).
+function syncXmlFromState() {
+  if (!state.formObj) return;
+  $("xml-editor").value = buildFormXml(state.formObj[KEYS.form] || {}, state.questions);
+}
+
+// Flip the right panel between the empty-state build controls and the
+// loaded-state action buttons.
+function updateRightPanel() {
+  const loaded = !!state.formObj;
+  $("xml-build-controls").classList.toggle("hidden", loaded);
+  $("xml-loaded-controls").classList.toggle("hidden", !loaded);
+  $("xml-panel-title").className =
+    "text-lg font-semibold " + (loaded ? "text-slate-800" : "text-slate-400");
+  $("xml-panel-title").textContent = loaded ? "XML (live editor)" : "XML editor";
+  if (!loaded) {
+    $("xml-editor").placeholder = "Paste your form XML here…";
+  } else {
+    $("xml-editor").placeholder = "XML generates automatically on load…";
+  }
+}
+
 function refreshFromState() {
   const fields = (state.formObj && state.formObj[KEYS.fields]) || [];
   state.questions = sortByOrder(fields.map(parseField));
@@ -83,6 +105,8 @@ function refreshFromState() {
   renderFormInfo($("form-info"), formMeta, state.questions.length);
   renderQuestions($("question-list"), state.questions, nameMap, numberMap, onRemoveCondition);
   updateTemplateBanner();
+  syncXmlFromState();   // auto-update right panel on every left-side change
+  updateRightPanel();
 }
 
 function deriveOutputName(name) {
@@ -137,51 +161,81 @@ async function handleFile(file) {
     refreshFromState();
 
     $("workspace").classList.remove("hidden");
-    $("xml-output").value = "";
-    $("xml-input").value = "";
     $("download-section").classList.add("hidden");
 
     setStatus("ok", "Loaded", [
       `${state.questions.length} questions parsed.`,
       docxBlob ? "template.docx held in memory (unaltered)." : "No template.docx found in this file.",
+      "XML generated automatically in the editor →",
     ]);
   } catch (e) {
     setStatus("error", "Could not read .sm8f", [e.message || String(e)]);
   }
 }
 
+// "Regenerate XML" — manual refresh of the editor from current state.
 function handleExport() {
   if (!state.formObj) {
     setStatus("error", "Nothing to export", ["Load a .sm8f file first."]);
     return;
   }
-  const xml = buildFormXml(state.formObj[KEYS.form] || {}, state.questions);
-  $("xml-output").value = xml;
-  setStatus("info", "Exported for LLM", [
-    `${state.questions.length} questions written as XML. Copy it, edit with your LLM, then paste it back below.`,
+  syncXmlFromState();
+  setStatus("info", "XML regenerated", [
+    `${state.questions.length} questions. Copy it, edit with your LLM, then click Validate & Repackage.`,
   ]);
 }
 
 async function handleCopy() {
-  const text = $("xml-output").value;
+  const text = $("xml-editor").value;
   if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
     setStatus("ok", "Copied", ["XML copied to clipboard."]);
   } catch (_e) {
-    $("xml-output").select();
+    $("xml-editor").select();
     setStatus("warn", "Copy manually", ["Clipboard blocked; the XML is selected — press Ctrl/Cmd+C."]);
   }
 }
 
+// "Validate" — check XML formatting and conversion issues without touching state.
+function handleValidate() {
+  const text = $("xml-editor").value.trim();
+  if (!text) {
+    setStatus("warn", "Nothing to validate", ["The XML editor is empty."]);
+    return;
+  }
+  let parsed;
+  try {
+    parsed = parseFormXml(text);
+  } catch (e) {
+    const detail = e instanceof XmlParseError ? e.message : String(e);
+    setStatus("error", "XML formatting error", [detail]);
+    return;
+  }
+  const result = validateImport(parsed);
+  if (result.ok && result.warnings.length === 0) {
+    setStatus("ok", `XML looks good — ${parsed.questions.length} question${parsed.questions.length === 1 ? "" : "s"}`, [
+      "No errors or warnings. Ready to Validate & Repackage.",
+    ]);
+  } else if (result.ok) {
+    setStatus("warn", `Valid with ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"}`, result.warnings);
+  } else {
+    setStatus("error", `Validation failed (${result.errors.length} issue${result.errors.length === 1 ? "" : "s"})`, [
+      ...result.errors,
+      ...result.warnings.map((w) => "warning: " + w),
+    ]);
+  }
+}
+
+// "Validate & Repackage" — apply the XML to the form (right → left) then rebuild.
 async function handleImport() {
   if (!state.formObj) {
     setStatus("error", "Load a file first", ["Import requires an original .sm8f for repackaging."]);
     return;
   }
-  const text = $("xml-input").value.trim();
+  const text = $("xml-editor").value.trim();
   if (!text) {
-    setStatus("error", "Nothing to import", ["Paste the edited XML into the box."]);
+    setStatus("error", "Nothing to import", ["The XML editor is empty."]);
     return;
   }
 
@@ -213,7 +267,7 @@ async function handleImport() {
 
   try {
     state.formObj = mergeForm(state.formObj, parsed.questions);
-    refreshFromState();
+    refreshFromState();  // re-renders left + syncs canonical XML back to editor
     await rebuildDownload();
 
     setStatus("ok", "Validated & repackaged", [
@@ -226,22 +280,11 @@ async function handleImport() {
   }
 }
 
-// ---- XML-build pathway -------------------------------------------------------
-
-function toggleXmlPanel() {
-  const panel = $("xml-build-panel");
-  const btn = $("xml-mode-btn");
-  const hidden = panel.classList.contains("hidden");
-  panel.classList.toggle("hidden", !hidden);
-  btn.textContent = hidden
-    ? "← Back to .sm8f upload"
-    : "Have XML already? Build a .sm8f without a template →";
-}
-
+// "Build .sm8f from XML" — empty-state pathway (no .sm8f loaded).
 async function handleBuildFromXml() {
-  const text = $("xml-build-input").value.trim();
+  const text = $("xml-editor").value.trim();
   if (!text) {
-    setStatus("error", "Nothing to build", ["Paste your form XML into the box."]);
+    setStatus("error", "Nothing to build", ["Paste your form XML into the editor."]);
     return;
   }
 
@@ -265,7 +308,6 @@ async function handleBuildFromXml() {
     return;
   }
 
-  // Read optional docx upload.
   const docxInput = $("xml-docx-input");
   const docxFile = docxInput && docxInput.files && docxInput.files[0];
   const docxBlob = docxFile || null;
@@ -281,11 +323,9 @@ async function handleBuildFromXml() {
   state.zip = null;
   state.formObj = mergeForm(blankForm, parsed.questions);
 
-  refreshFromState();
+  refreshFromState();  // renders left, syncs canonical XML, flips right panel
 
   $("workspace").classList.remove("hidden");
-  $("xml-output").value = "";
-  $("xml-input").value = "";
   $("download-section").classList.add("hidden");
 
   try {
@@ -334,21 +374,26 @@ function init() {
   wireDropzone();
   $("export-btn").addEventListener("click", handleExport);
   $("copy-btn").addEventListener("click", handleCopy);
+  $("validate-btn").addEventListener("click", handleValidate);
   $("import-btn").addEventListener("click", handleImport);
-  $("xml-mode-btn").addEventListener("click", toggleXmlPanel);
-  $("xml-build-btn").addEventListener("click", handleBuildFromXml);
+  $("build-btn").addEventListener("click", handleBuildFromXml);
 
   $("form-name-input").addEventListener("input", async () => {
     if (!state.formObj || !state.formObj[KEYS.form]) return;
     state.formObj[KEYS.form].name = $("form-name-input").value;
+    syncXmlFromState();
     try { await rebuildDownload(); } catch (_e) {}
   });
 
   $("form-badge-input").addEventListener("input", async () => {
     if (!state.formObj || !state.formObj[KEYS.form]) return;
     state.formObj[KEYS.form].badge_name = $("form-badge-input").value;
+    syncXmlFromState();
     try { await rebuildDownload(); } catch (_e) {}
   });
+
+  // Initialise right panel to empty state on load.
+  updateRightPanel();
 }
 
 document.addEventListener("DOMContentLoaded", init);
