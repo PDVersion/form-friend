@@ -77,7 +77,10 @@ function refreshFromState() {
   state.questions = sortByOrder(fields.map(parseField));
   const nameMap = idToNameMap(state.questions);
   const numberMap = idToNumberMap(state.questions);
-  renderFormInfo($("form-info"), state.formObj[KEYS.form] || {}, state.questions.length);
+  const formMeta = (state.formObj && state.formObj[KEYS.form]) || {};
+  $("form-name-input").value = formMeta.name || "";
+  $("form-badge-input").value = formMeta.badge_name || "";
+  renderFormInfo($("form-info"), formMeta, state.questions.length);
   renderQuestions($("question-list"), state.questions, nameMap, numberMap, onRemoveCondition);
   updateTemplateBanner();
 }
@@ -334,6 +337,18 @@ function init() {
   $("import-btn").addEventListener("click", handleImport);
   $("xml-mode-btn").addEventListener("click", toggleXmlPanel);
   $("xml-build-btn").addEventListener("click", handleBuildFromXml);
+
+  $("form-name-input").addEventListener("input", async () => {
+    if (!state.formObj || !state.formObj[KEYS.form]) return;
+    state.formObj[KEYS.form].name = $("form-name-input").value;
+    try { await rebuildDownload(); } catch (_e) {}
+  });
+
+  $("form-badge-input").addEventListener("input", async () => {
+    if (!state.formObj || !state.formObj[KEYS.form]) return;
+    state.formObj[KEYS.form].badge_name = $("form-badge-input").value;
+    try { await rebuildDownload(); } catch (_e) {}
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);

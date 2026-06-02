@@ -109,6 +109,5 @@ export function renderQuestions(container, vms, idToName, idToNumber, onRemoveCo
 
 export function renderFormInfo(node, formMeta, count) {
   node.innerHTML = "";
-  node.appendChild(el("div", "text-lg font-semibold text-slate-800", formMeta.name || "(unnamed form)"));
-  node.appendChild(el("div", "text-sm text-slate-500", `${count} question${count === 1 ? "" : "s"} • form ${formMeta.uuid || "?"}`));
+  node.appendChild(el("div", "", `${count} question${count === 1 ? "" : "s"} • UUID ${formMeta.uuid || "?"}`));
 }

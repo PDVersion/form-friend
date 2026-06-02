@@ -24,11 +24,15 @@ attributes or elements that are not listed here. Do not add comments inside the 
 One `<question>` per line (readability only — not required). `<details>`, `<choices>`, and
 `<conditions>` are each **optional**: include them only when needed.
 
+> **Form-level fields:** `<form name="…">` sets the form's full name. The **badge name** — the short
+> label shown on the SM8 badge widget — is a separate field editable in the app's **Form Details**
+> panel after loading. It is not part of the XML.
+
 ## Elements & attributes
 
 | Part | Required | Notes |
 |---|---|---|
-| `<form name="…">` | yes | Becomes the form's name. |
+| `<form name="…">` | yes | Becomes the form's full name (editable in the **Form Details** panel after loading). |
 | `<form id="…">` | no | Leave the all-zero placeholder; the app assigns a real form UUID. |
 | `<question id="…">` | yes | Unique UUID-shaped id (see Rules) so conditions can point at it. |
 | `<question type="…">` | yes | One Type from the table below, spelled EXACTLY. |
