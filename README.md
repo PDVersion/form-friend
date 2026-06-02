@@ -61,6 +61,16 @@ Drop `sample/DRAFT_Pool_Service_Form_2027_FY.sm8f` to try it.
 - Choice questions add `<choices><choice>…</choice></choices>`.
 - `<condition ref="…">` must reference an existing, *earlier* question's `id`.
 
+## Build a form from plain English (LLM prompt)
+
+Don't want to hand-write XML? [`XML_GUIDE.md`](XML_GUIDE.md) is a copy-paste prompt:
+
+1. Copy the **entire** contents of `XML_GUIDE.md` into a new LLM chat.
+2. List the questions you want in plain English (type, required?, options, show/skip logic).
+3. The LLM replies with valid Form Friend XML.
+4. Paste it into **"Have XML already? → Build .sm8f"** (no original file needed) or the *Import edited
+   XML* box, then download your `.sm8f`.
+
 ## How the data is handled
 
 `form.json` is `{ "form": {…}, "fields": [ … ] }`. Each field's type, help text,
