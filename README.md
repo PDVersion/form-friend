@@ -17,6 +17,11 @@ ServiceM8's form editor edits one question at a time. Form Friend lets you:
    **repackage** a valid `.sm8f` (with the original `template.docx` untouched) for
    re-import into ServiceM8.
 
+**Or**, if you already have the XML (e.g. from a prior export): paste it directly via
+"Have XML already?" and build an `.sm8f` from scratch — no original file needed.
+Choose form template **None** to skip PDF generation (no `.docx` required), or upload
+a `.docx` to embed a template.
+
 ## Run it locally
 
 ES modules require HTTP (not `file://`), so serve the folder:
@@ -49,9 +54,12 @@ Drop `sample/DRAFT_Pool_Service_Form_2027_FY.sm8f` to try it.
 
 - `type`: `Text`, `Text (Multi-Line)`, `Number`, `Date`, `Multiple Choice`,
   `Multiple Choice (Multi-Answer)`, `Signature`, `Photo`.
-- `op`: `CON` (contains), `NCON` (not contains), `EQ` (equals), `NEQ` (not equals).
+- `op`: `CON` (contains), `NCON` (not contains), `EQ` (equals), `NEQ` (not equals),
+  `GT` (greater than), `LT` (less than).
+- Conditions are **skip rules**: a question is hidden when the condition(s) are satisfied.
+  Maximum 3 conditions per question, combined with the `method` (`AND`/`OR`).
 - Choice questions add `<choices><choice>…</choice></choices>`.
-- `<condition ref="…">` must reference an existing question's `id`.
+- `<condition ref="…">` must reference an existing, *earlier* question's `id`.
 
 ## How the data is handled
 
@@ -101,7 +109,10 @@ npm test        # node test/checks.mjs
 
 Covers parsing the real sample (55 questions), PHP-style byte fidelity, the
 newline-per-field formatter, reference-integrity validation (pass and fail),
-the merge round-trip (verbatim blob preservation), and UUID generation.
+the merge round-trip (verbatim blob preservation), UUID generation,
+the extended operator set (GT/LT), the 3-condition cap, `conditionIssues`
+broken-condition detection (all cases), and the XML-build pathway
+(`buildBlankFormMeta`, `buildBlankForm`, merge + serialization round-trip).
 (DOM/zip paths are exercised manually in the browser — see steps above.)
 
 ## Deployment
