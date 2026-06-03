@@ -10,7 +10,7 @@ import { ensureUuids, mergeForm, buildBlankForm } from "./merge.js";
 import { validateImport } from "./validate.js";
 import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
-import { BADGE_NAME_MAX, badgeNameTooLong, deriveBadgeName } from "./badge.js";
+import { deriveBadgeName, badgeNameIssue } from "./badge.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -83,13 +83,14 @@ function syncXmlFromState() {
   $("xml-editor").value = buildFormXml(state.formObj[KEYS.form] || {}, state.questions);
 }
 
-// Show/hide the inline badge-name length warning and flag the input border.
+// Show/hide the inline badge-name warning (empty or too long) and flag the border.
 function updateBadgeWarning() {
   const badge = $("form-badge-input").value || "";
   const el = $("badge-warning");
   const input = $("form-badge-input");
-  if (badgeNameTooLong(badge)) {
-    el.textContent = `Badge name is ${badge.length} characters — ServiceM8 requires fewer than 12. Shorten it before importing.`;
+  const issue = badgeNameIssue(badge);
+  if (issue) {
+    el.textContent = issue;
     el.classList.remove("hidden");
     input.classList.add("border-rose-400");
     input.classList.remove("border-slate-300");
@@ -109,15 +110,12 @@ function initBadgeFromLoad() {
   if (badgeAuto) form.badge_name = deriveBadgeName(form.name || "");
 }
 
-// A status line flagging an over-long badge (used on repackage/build), or [].
+// A status line flagging a badge problem (empty or over-long), or [].
 function badgeWarningLines() {
   const badge =
     (state.formObj && state.formObj[KEYS.form] && state.formObj[KEYS.form].badge_name) || "";
-  return badgeNameTooLong(badge)
-    ? [
-        `warning: badge name "${badge}" is ${badge.length} characters — ServiceM8 requires fewer than 12; shorten it in Form Details before importing.`,
-      ]
-    : [];
+  const issue = badgeNameIssue(badge);
+  return issue ? ["warning: " + issue] : [];
 }
 
 // Flip the right panel between the empty-state build controls and the
