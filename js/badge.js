@@ -12,8 +12,24 @@ export function badgeNameTooLong(badge) {
   return (badge || "").length > BADGE_NAME_MAX;
 }
 
+// True when the badge name is missing/blank (ServiceM8 requires one).
+export function badgeNameEmpty(badge) {
+  return !(badge || "").trim();
+}
+
 // Derive a valid badge name from a form name: trim, then truncate to the limit.
 // Returns "" for an empty/blank form name.
 export function deriveBadgeName(formName) {
   return (formName || "").trim().slice(0, BADGE_NAME_MAX);
+}
+
+// A human-readable problem with the badge name, or null when it's valid.
+export function badgeNameIssue(badge) {
+  if (badgeNameEmpty(badge)) {
+    return "Badge name can't be empty — give the form a name so a short badge can be derived, or type one.";
+  }
+  if (badgeNameTooLong(badge)) {
+    return `Badge name is ${badge.length} characters — ServiceM8 requires fewer than 12. Shorten it before importing.`;
+  }
+  return null;
 }
