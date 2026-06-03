@@ -431,9 +431,6 @@ function init() {
   $("copy-create-guide-btn").addEventListener("click", () =>
     copyGuide("XML_GUIDE.md", "Form creation guide")
   );
-  $("copy-quick-create-guide-btn").addEventListener("click", () =>
-    copyGuide("XML_CREATE_GUIDE.md", "Quick XML create guide")
-  );
   $("copy-edit-guide-btn").addEventListener("click", () =>
     copyGuide("XML_EDIT_GUIDE.md", "XML edit guide")
   );
