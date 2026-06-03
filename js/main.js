@@ -10,7 +10,7 @@ import { ensureUuids, mergeForm, buildBlankForm } from "./merge.js";
 import { validateImport } from "./validate.js";
 import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
-import { BADGE_NAME_MAX, badgeNameTooLong, deriveBadgeName } from "./badge.js";
+import { BADGE_NAME_MAX, badgeNameTooLong, badgeNameHasSpaces, deriveBadgeName } from "./badge.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -83,13 +83,23 @@ function syncXmlFromState() {
   $("xml-editor").value = buildFormXml(state.formObj[KEYS.form] || {}, state.questions);
 }
 
-// Show/hide the inline badge-name length warning and flag the input border.
+// Show/hide the inline badge-name warning and flag the input border.
+// Length over the limit is an error; spaces are a softer recommendation.
 function updateBadgeWarning() {
   const badge = $("form-badge-input").value || "";
   const el = $("badge-warning");
   const input = $("form-badge-input");
+  const msgs = [];
   if (badgeNameTooLong(badge)) {
-    el.textContent = `Badge name is ${badge.length} characters — ServiceM8 requires fewer than 12. Shorten it before importing.`;
+    msgs.push(
+      `Badge name is ${badge.length} characters — ServiceM8 allows at most ${BADGE_NAME_MAX}. Shorten it before importing.`
+    );
+  }
+  if (badgeNameHasSpaces(badge)) {
+    msgs.push("Use camelCase or ALL CAPS with no spaces (e.g. “siteSafety”).");
+  }
+  if (msgs.length) {
+    el.textContent = msgs.join(" ");
     el.classList.remove("hidden");
     input.classList.add("border-rose-400");
     input.classList.remove("border-slate-300");
@@ -109,15 +119,22 @@ function initBadgeFromLoad() {
   if (badgeAuto) form.badge_name = deriveBadgeName(form.name || "");
 }
 
-// A status line flagging an over-long badge (used on repackage/build), or [].
+// Status lines flagging badge-name issues (used on repackage/build), or [].
 function badgeWarningLines() {
   const badge =
     (state.formObj && state.formObj[KEYS.form] && state.formObj[KEYS.form].badge_name) || "";
-  return badgeNameTooLong(badge)
-    ? [
-        `warning: badge name "${badge}" is ${badge.length} characters — ServiceM8 requires fewer than 12; shorten it in Form Details before importing.`,
-      ]
-    : [];
+  const lines = [];
+  if (badgeNameTooLong(badge)) {
+    lines.push(
+      `warning: badge name "${badge}" is ${badge.length} characters — ServiceM8 allows at most ${BADGE_NAME_MAX}; shorten it in Form Details before importing.`
+    );
+  }
+  if (badgeNameHasSpaces(badge)) {
+    lines.push(
+      `warning: badge name "${badge}" contains spaces — use camelCase or ALL CAPS (e.g. "siteSafety") in Form Details.`
+    );
+  }
+  return lines;
 }
 
 // Flip the right panel between the empty-state build controls and the

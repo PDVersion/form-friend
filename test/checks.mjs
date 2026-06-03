@@ -28,7 +28,7 @@ import { buildFormXml } from "../js/xml.js";
 import { validateImport } from "../js/validate.js";
 import { ensureUuids, mergeForm, buildBlankForm } from "../js/merge.js";
 import { generateUuid, isUuid } from "../js/uuid.js";
-import { BADGE_NAME_MAX, badgeNameTooLong, deriveBadgeName } from "../js/badge.js";
+import { BADGE_NAME_MAX, badgeNameTooLong, badgeNameHasSpaces, deriveBadgeName } from "../js/badge.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -265,18 +265,24 @@ ok("built form has 1 field after merge", roundTripped[KEYS.fields].length === 1,
 ok("built form.document_template_uuid survives serialization",
   roundTripped[KEYS.form].document_template_uuid === "");
 
-console.log("\n[14] Badge name length rule (ServiceM8 requires < 12 chars)");
-ok("limit is 11 (must be under 12)", BADGE_NAME_MAX === 11, `got ${BADGE_NAME_MAX}`);
-ok("11 chars is allowed", !badgeNameTooLong("12345678901"));
-ok("12 chars is flagged too long", badgeNameTooLong("123456789012"));
+console.log("\n[14] Badge name rules (max 10 chars; camelCase / ALL CAPS, no spaces)");
+ok("limit is 10", BADGE_NAME_MAX === 10, `got ${BADGE_NAME_MAX}`);
+ok("10 chars is allowed", !badgeNameTooLong("1234567890"));
+ok("11 chars is flagged too long", badgeNameTooLong("12345678901"));
 ok("empty is fine", !badgeNameTooLong(""));
 ok("null is fine", !badgeNameTooLong(null));
-ok("derive truncates long form name to 11", deriveBadgeName("Pool Service Visit") === "Pool Servic",
+ok("spaces are flagged", badgeNameHasSpaces("site safety"), `got "${badgeNameHasSpaces("site safety")}"`);
+ok("no spaces is fine", !badgeNameHasSpaces("siteSafety"));
+ok("empty has no spaces", !badgeNameHasSpaces(""));
+ok("null has no spaces", !badgeNameHasSpaces(null));
+ok("derive collapses words into camelCase + truncates to 10",
+  deriveBadgeName("Pool Service Visit") === "poolServic",
   `got "${deriveBadgeName("Pool Service Visit")}"`);
+ok("derived names have no spaces", !badgeNameHasSpaces(deriveBadgeName("Pool Service Visit")));
 ok("derive trims whitespace", deriveBadgeName("  Hi  ") === "Hi", `got "${deriveBadgeName("  Hi  ")}"`);
 ok("derived names are never too long", !badgeNameTooLong(deriveBadgeName("A very long form name indeed")));
 ok("derive of empty is empty", deriveBadgeName("") === "");
-ok("short name passes through unchanged", deriveBadgeName("Audit") === "Audit");
+ok("single word passes through unchanged", deriveBadgeName("Audit") === "Audit");
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);
