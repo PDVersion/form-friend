@@ -11,6 +11,7 @@ import { validateImport } from "./validate.js";
 import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
 import { badgeNameIssue, badgeNameHasSpaces, deriveBadgeName } from "./badge.js";
+import { initGuide } from "./guide.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -527,6 +528,9 @@ function init() {
     updateBadgeWarning();
     try { await rebuildDownload(); } catch (_e) {}
   });
+
+  // On-screen user guide (button + first-visit auto-open).
+  initGuide();
 
   // Initialise right panel to empty state on load.
   updateRightPanel();
