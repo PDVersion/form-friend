@@ -18,6 +18,11 @@ export function badgeNameTooLong(badge) {
   return (badge || "").length > BADGE_NAME_MAX;
 }
 
+// True when the badge name is missing/blank (ServiceM8 requires one).
+export function badgeNameEmpty(badge) {
+  return !(badge || "").trim();
+}
+
 // True when the badge name contains whitespace — i.e. it is not the
 // recommended single-token camelCase / ALL CAPS form.
 export function badgeNameHasSpaces(badge) {
@@ -43,13 +48,15 @@ export function deriveBadgeName(formName) {
   return camel.slice(0, BADGE_NAME_MAX);
 }
 
-// A human-readable problem with the badge name, or null when it's valid.
+// A blocking problem with the badge name, or null when there is none.
+// Empty and over-length are hard errors; spaces are a softer recommendation
+// surfaced separately via badgeNameHasSpaces.
 export function badgeNameIssue(badge) {
   if (badgeNameEmpty(badge)) {
     return "Badge name can't be empty — give the form a name so a short badge can be derived, or type one.";
   }
   if (badgeNameTooLong(badge)) {
-    return `Badge name is ${badge.length} characters — ServiceM8 requires fewer than 12. Shorten it before importing.`;
+    return `Badge name is ${badge.length} characters — ServiceM8 allows at most ${BADGE_NAME_MAX}. Shorten it before importing.`;
   }
   return null;
 }

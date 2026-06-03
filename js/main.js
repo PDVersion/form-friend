@@ -10,7 +10,7 @@ import { ensureUuids, mergeForm, buildBlankForm } from "./merge.js";
 import { validateImport } from "./validate.js";
 import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
-import { BADGE_NAME_MAX, badgeNameTooLong, badgeNameHasSpaces, deriveBadgeName } from "./badge.js";
+import { badgeNameIssue, badgeNameHasSpaces, deriveBadgeName } from "./badge.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -84,17 +84,14 @@ function syncXmlFromState() {
 }
 
 // Show/hide the inline badge-name warning and flag the input border.
-// Length over the limit is an error; spaces are a softer recommendation.
+// Empty / over-length are blocking errors; spaces are a softer recommendation.
 function updateBadgeWarning() {
   const badge = $("form-badge-input").value || "";
   const el = $("badge-warning");
   const input = $("form-badge-input");
   const msgs = [];
-  if (badgeNameTooLong(badge)) {
-    msgs.push(
-      `Badge name is ${badge.length} characters — ServiceM8 allows at most ${BADGE_NAME_MAX}. Shorten it before importing.`
-    );
-  }
+  const issue = badgeNameIssue(badge);
+  if (issue) msgs.push(issue);
   if (badgeNameHasSpaces(badge)) {
     msgs.push("Use camelCase or ALL CAPS with no spaces (e.g. “siteSafety”).");
   }
@@ -124,11 +121,8 @@ function badgeWarningLines() {
   const badge =
     (state.formObj && state.formObj[KEYS.form] && state.formObj[KEYS.form].badge_name) || "";
   const lines = [];
-  if (badgeNameTooLong(badge)) {
-    lines.push(
-      `warning: badge name "${badge}" is ${badge.length} characters — ServiceM8 allows at most ${BADGE_NAME_MAX}; shorten it in Form Details before importing.`
-    );
-  }
+  const issue = badgeNameIssue(badge);
+  if (issue) lines.push(`warning: ${issue}`);
   if (badgeNameHasSpaces(badge)) {
     lines.push(
       `warning: badge name "${badge}" contains spaces — use camelCase or ALL CAPS (e.g. "siteSafety") in Form Details.`
