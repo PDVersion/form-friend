@@ -21,3 +21,16 @@ textarea {
   max-height: 80vh;
   resize: vertical;
 }
+
+/* On large screens the right column is a fixed-height flex column that fills
+   the viewport; let the editor grow to fill it (its own internal scroll then
+   handles long XML, so the page itself never scrolls). */
+@media (min-width: 1024px) {
+  #xml-editor {
+    flex: 1 1 0%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    resize: none;
+  }
+}
