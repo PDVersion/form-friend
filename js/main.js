@@ -10,10 +10,15 @@ import { ensureUuids, mergeForm, buildBlankForm } from "./merge.js";
 import { validateImport } from "./validate.js";
 import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
+import { BADGE_NAME_MAX, badgeNameTooLong, deriveBadgeName } from "./badge.js";
 
 const $ = (id) => document.getElementById(id);
 
 let lastDownloadUrl = null;
+
+// While true, the badge name auto-tracks a truncated version of the form name.
+// Any manual edit to the badge field switches this off (custom badge).
+let badgeAuto = true;
 
 const STATUS_STYLES = {
   ok: "border-emerald-300 bg-emerald-50 text-emerald-800",
@@ -78,6 +83,43 @@ function syncXmlFromState() {
   $("xml-editor").value = buildFormXml(state.formObj[KEYS.form] || {}, state.questions);
 }
 
+// Show/hide the inline badge-name length warning and flag the input border.
+function updateBadgeWarning() {
+  const badge = $("form-badge-input").value || "";
+  const el = $("badge-warning");
+  const input = $("form-badge-input");
+  if (badgeNameTooLong(badge)) {
+    el.textContent = `Badge name is ${badge.length} characters — ServiceM8 requires fewer than 12. Shorten it before importing.`;
+    el.classList.remove("hidden");
+    input.classList.add("border-rose-400");
+    input.classList.remove("border-slate-300");
+  } else {
+    el.classList.add("hidden");
+    input.classList.add("border-slate-300");
+    input.classList.remove("border-rose-400");
+  }
+}
+
+// On load/build: derive the badge from the form name when none is set, and
+// decide whether the badge should keep auto-tracking the form name.
+function initBadgeFromLoad() {
+  const form = state.formObj && state.formObj[KEYS.form];
+  if (!form) return;
+  badgeAuto = !((form.badge_name || "").trim());
+  if (badgeAuto) form.badge_name = deriveBadgeName(form.name || "");
+}
+
+// A status line flagging an over-long badge (used on repackage/build), or [].
+function badgeWarningLines() {
+  const badge =
+    (state.formObj && state.formObj[KEYS.form] && state.formObj[KEYS.form].badge_name) || "";
+  return badgeNameTooLong(badge)
+    ? [
+        `warning: badge name "${badge}" is ${badge.length} characters — ServiceM8 requires fewer than 12; shorten it in Form Details before importing.`,
+      ]
+    : [];
+}
+
 // Flip the right panel between the empty-state build controls and the
 // loaded-state action buttons.
 function updateRightPanel() {
@@ -102,6 +144,7 @@ function refreshFromState() {
   const formMeta = (state.formObj && state.formObj[KEYS.form]) || {};
   $("form-name-input").value = formMeta.name || "";
   $("form-badge-input").value = formMeta.badge_name || "";
+  updateBadgeWarning();
   renderFormInfo($("form-info"), formMeta, state.questions.length);
   renderQuestions($("question-list"), state.questions, nameMap, numberMap, onRemoveCondition);
   updateTemplateBanner();
@@ -158,6 +201,7 @@ async function handleFile(file) {
     state.docxBlob = docxBlob;
     state.zip = zip;
     state.mode = "sm8f";
+    initBadgeFromLoad();
     refreshFromState();
 
     $("workspace").classList.remove("hidden");
@@ -167,6 +211,7 @@ async function handleFile(file) {
       `${state.questions.length} questions parsed.`,
       docxBlob ? "template.docx held in memory (unaltered)." : "No template.docx found in this file.",
       "XML generated automatically in the editor →",
+      ...badgeWarningLines(),
     ]);
   } catch (e) {
     setStatus("error", "Could not read .sm8f", [e.message || String(e)]);
@@ -273,6 +318,7 @@ async function handleImport() {
     setStatus("ok", "Validated & repackaged", [
       `${parsed.questions.length} questions (${newBefore} new). Conditional references all resolve.`,
       ...result.warnings.map((w) => "warning: " + w),
+      ...badgeWarningLines(),
       "Download the rebuilt .sm8f below.",
     ]);
   } catch (e) {
@@ -323,6 +369,7 @@ async function handleBuildFromXml() {
   state.zip = null;
   state.formObj = mergeForm(blankForm, parsed.questions);
 
+  initBadgeFromLoad();
   refreshFromState();  // renders left, syncs canonical XML, flips right panel
 
   $("workspace").classList.remove("hidden");
@@ -336,6 +383,7 @@ async function handleBuildFromXml() {
         ? `template.docx embedded (${docxFile.name}).`
         : "Form template: None — SM8 will not generate a PDF.",
       ...result.warnings.map((w) => "warning: " + w),
+      ...badgeWarningLines(),
       "Download the .sm8f below.",
     ]);
   } catch (e) {
@@ -389,6 +437,8 @@ function handleHome() {
   $("form-badge-input").value = "";
   $("file-input").value = "";
   $("xml-docx-input").value = "";
+  badgeAuto = true;
+  updateBadgeWarning();
   updateRightPanel();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -437,15 +487,33 @@ function init() {
 
   $("form-name-input").addEventListener("input", async () => {
     if (!state.formObj || !state.formObj[KEYS.form]) return;
-    state.formObj[KEYS.form].name = $("form-name-input").value;
+    const form = state.formObj[KEYS.form];
+    form.name = $("form-name-input").value;
+    // While auto-tracking, keep the badge as a truncated version of the form name.
+    if (badgeAuto) {
+      form.badge_name = deriveBadgeName(form.name);
+      $("form-badge-input").value = form.badge_name;
+      updateBadgeWarning();
+    }
     syncXmlFromState();
     try { await rebuildDownload(); } catch (_e) {}
   });
 
   $("form-badge-input").addEventListener("input", async () => {
     if (!state.formObj || !state.formObj[KEYS.form]) return;
-    state.formObj[KEYS.form].badge_name = $("form-badge-input").value;
-    syncXmlFromState();
+    const form = state.formObj[KEYS.form];
+    const val = $("form-badge-input").value;
+    if (!val.trim()) {
+      // Cleared → resume auto-tracking the (truncated) form name.
+      badgeAuto = true;
+      form.badge_name = deriveBadgeName(form.name || "");
+      $("form-badge-input").value = form.badge_name;
+    } else {
+      // Manual entry → custom badge; stop auto-tracking.
+      badgeAuto = false;
+      form.badge_name = val;
+    }
+    updateBadgeWarning();
     try { await rebuildDownload(); } catch (_e) {}
   });
 
