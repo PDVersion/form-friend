@@ -28,7 +28,13 @@ import { buildFormXml } from "../js/xml.js";
 import { validateImport } from "../js/validate.js";
 import { ensureUuids, mergeForm, buildBlankForm } from "../js/merge.js";
 import { generateUuid, isUuid } from "../js/uuid.js";
-import { BADGE_NAME_MAX, badgeNameTooLong, badgeNameHasSpaces, deriveBadgeName } from "../js/badge.js";
+import {
+  BADGE_NAME_MAX,
+  badgeNameTooLong,
+  badgeNameEmpty,
+  deriveBadgeName,
+  badgeNameIssue,
+} from "../js/badge.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -283,6 +289,14 @@ ok("derive trims whitespace", deriveBadgeName("  Hi  ") === "Hi", `got "${derive
 ok("derived names are never too long", !badgeNameTooLong(deriveBadgeName("A very long form name indeed")));
 ok("derive of empty is empty", deriveBadgeName("") === "");
 ok("single word passes through unchanged", deriveBadgeName("Audit") === "Audit");
+ok("short name passes through unchanged", deriveBadgeName("Audit") === "Audit");
+ok("empty badge detected", badgeNameEmpty(""));
+ok("whitespace-only badge detected as empty", badgeNameEmpty("   "));
+ok("non-empty badge not flagged empty", !badgeNameEmpty("Audit"));
+ok("issue: empty badge returns a message", typeof badgeNameIssue("") === "string");
+ok("issue: too-long badge returns a message", typeof badgeNameIssue("123456789012") === "string");
+ok("issue: valid badge returns null", badgeNameIssue("Audit") === null);
+ok("issue: 11-char badge returns null", badgeNameIssue("12345678901") === null);
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

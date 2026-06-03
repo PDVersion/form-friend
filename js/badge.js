@@ -42,3 +42,14 @@ export function deriveBadgeName(formName) {
           .join("");
   return camel.slice(0, BADGE_NAME_MAX);
 }
+
+// A human-readable problem with the badge name, or null when it's valid.
+export function badgeNameIssue(badge) {
+  if (badgeNameEmpty(badge)) {
+    return "Badge name can't be empty — give the form a name so a short badge can be derived, or type one.";
+  }
+  if (badgeNameTooLong(badge)) {
+    return `Badge name is ${badge.length} characters — ServiceM8 requires fewer than 12. Shorten it before importing.`;
+  }
+  return null;
+}
