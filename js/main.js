@@ -343,6 +343,56 @@ async function handleBuildFromXml() {
   }
 }
 
+// ---- Top toolbar: home + copy-guide buttons ---------------------------------
+
+// Copy arbitrary text to the clipboard with a status message.
+async function copyText(text, label) {
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus("ok", "Copied", [`${label} copied to clipboard.`]);
+  } catch (_e) {
+    setStatus("warn", "Copy blocked", [
+      `Could not access the clipboard. ${label} is open in a new tab — copy it manually.`,
+    ]);
+    const blob = new Blob([text], { type: "text/plain" });
+    window.open(URL.createObjectURL(blob), "_blank");
+  }
+}
+
+// Fetch a guide markdown file shipped alongside the app, then copy it.
+async function copyGuide(path, label) {
+  try {
+    const res = await fetch(path, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    await copyText(text, label);
+  } catch (e) {
+    setStatus("error", "Could not load guide", [
+      `${path} could not be read (${e.message || e}).`,
+      "Serve the app over http (e.g. npm run serve) so the guide files are reachable.",
+    ]);
+  }
+}
+
+// "Start again" — wipe state and return the UI to a blank slate.
+function handleHome() {
+  resetState();
+  if (lastDownloadUrl) {
+    URL.revokeObjectURL(lastDownloadUrl);
+    lastDownloadUrl = null;
+  }
+  $("workspace").classList.add("hidden");
+  $("download-section").classList.add("hidden");
+  $("status").classList.add("hidden");
+  $("xml-editor").value = "";
+  $("form-name-input").value = "";
+  $("form-badge-input").value = "";
+  $("file-input").value = "";
+  $("xml-docx-input").value = "";
+  updateRightPanel();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 // ---- DOM wiring --------------------------------------------------------------
 
 function wireDropzone() {
@@ -377,6 +427,13 @@ function init() {
   $("validate-btn").addEventListener("click", handleValidate);
   $("import-btn").addEventListener("click", handleImport);
   $("build-btn").addEventListener("click", handleBuildFromXml);
+  $("home-btn").addEventListener("click", handleHome);
+  $("copy-create-guide-btn").addEventListener("click", () =>
+    copyGuide("XML_GUIDE.md", "Form creation guide")
+  );
+  $("copy-edit-guide-btn").addEventListener("click", () =>
+    copyGuide("XML_EDIT_GUIDE.md", "XML edit guide")
+  );
 
   $("form-name-input").addEventListener("input", async () => {
     if (!state.formObj || !state.formObj[KEYS.form]) return;
