@@ -10,7 +10,7 @@ import { ensureUuids, mergeForm, buildBlankForm } from "./merge.js";
 import { validateImport } from "./validate.js";
 import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
-import { deriveBadgeName, badgeNameIssue } from "./badge.js";
+import { badgeNameIssue, badgeNameHasSpaces, deriveBadgeName } from "./badge.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -83,14 +83,20 @@ function syncXmlFromState() {
   $("xml-editor").value = buildFormXml(state.formObj[KEYS.form] || {}, state.questions);
 }
 
-// Show/hide the inline badge-name warning (empty or too long) and flag the border.
+// Show/hide the inline badge-name warning and flag the input border.
+// Empty / over-length are blocking errors; spaces are a softer recommendation.
 function updateBadgeWarning() {
   const badge = $("form-badge-input").value || "";
   const el = $("badge-warning");
   const input = $("form-badge-input");
+  const msgs = [];
   const issue = badgeNameIssue(badge);
-  if (issue) {
-    el.textContent = issue;
+  if (issue) msgs.push(issue);
+  if (badgeNameHasSpaces(badge)) {
+    msgs.push("Use camelCase or ALL CAPS with no spaces (e.g. “siteSafety”).");
+  }
+  if (msgs.length) {
+    el.textContent = msgs.join(" ");
     el.classList.remove("hidden");
     input.classList.add("border-rose-400");
     input.classList.remove("border-slate-300");
@@ -110,12 +116,19 @@ function initBadgeFromLoad() {
   if (badgeAuto) form.badge_name = deriveBadgeName(form.name || "");
 }
 
-// A status line flagging a badge problem (empty or over-long), or [].
+// Status lines flagging badge-name issues (used on repackage/build), or [].
 function badgeWarningLines() {
   const badge =
     (state.formObj && state.formObj[KEYS.form] && state.formObj[KEYS.form].badge_name) || "";
+  const lines = [];
   const issue = badgeNameIssue(badge);
-  return issue ? ["warning: " + issue] : [];
+  if (issue) lines.push(`warning: ${issue}`);
+  if (badgeNameHasSpaces(badge)) {
+    lines.push(
+      `warning: badge name "${badge}" contains spaces — use camelCase or ALL CAPS (e.g. "siteSafety") in Form Details.`
+    );
+  }
+  return lines;
 }
 
 // Flip the right panel between the empty-state build controls and the
