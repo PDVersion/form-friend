@@ -611,6 +611,44 @@ textarea {
 .ff-lm-btn-secondary:hover { background: #f1f5f9; }
 .ff-lm-btn-small { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
 
+/* ── Full-screen diagram layer (above the Logic Map overlay) ── */
+.ff-lm-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+
+.ff-lm-fs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.ff-lm-fs-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ff-lm-fs-pane {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.ff-lm-fs-pane .ff-lm-diagram-svg svg {
+  width: 100%;
+  height: auto;
+  max-width: none;
+}
+
 /* ── Hidden utility ── */
 .ff-lm-hidden { display: none !important; }
 

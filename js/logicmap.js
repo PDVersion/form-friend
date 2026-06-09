@@ -31,6 +31,7 @@ function openOverlay() {
 }
 
 function closeOverlay() {
+  closeDiagramFullscreen();
   if (overlayEl) { overlayEl.remove(); overlayEl = null; }
   document.body.classList.remove("ff-lm-open");
 }
@@ -211,6 +212,9 @@ function buildTextMap(questions, graph) {
   const diagramToggle = el("div", "ff-lm-diagram-toggle");
   const showDiagramBtn = el("button", "ff-lm-btn-secondary", "Show flow diagram");
   diagramToggle.appendChild(showDiagramBtn);
+  const maximiseBtn = el("button", "ff-lm-btn-secondary ff-lm-hidden", "⛶ Maximise");
+  maximiseBtn.title = "Open the diagram full-screen for easier reading";
+  diagramToggle.appendChild(maximiseBtn);
   wrap.appendChild(diagramToggle);
 
   const diagramPane = el("div", "ff-lm-diagram-pane ff-lm-hidden");
@@ -220,15 +224,56 @@ function buildTextMap(questions, graph) {
     const isHidden = diagramPane.classList.contains("ff-lm-hidden");
     if (isHidden) {
       diagramPane.classList.remove("ff-lm-hidden");
+      maximiseBtn.classList.remove("ff-lm-hidden");
       showDiagramBtn.textContent = "Hide flow diagram";
       renderMermaid(graph, diagramPane);
     } else {
       diagramPane.classList.add("ff-lm-hidden");
+      maximiseBtn.classList.add("ff-lm-hidden");
       showDiagramBtn.textContent = "Show flow diagram";
     }
   });
 
+  maximiseBtn.addEventListener("click", () => openDiagramFullscreen(graph));
+
   return wrap;
+}
+
+// Opens the flow diagram in a dedicated full-screen layer on top of the overlay,
+// so it can use the whole viewport and is easier to read on large forms.
+let fullscreenEl = null;
+
+function openDiagramFullscreen(graph) {
+  if (fullscreenEl) fullscreenEl.remove();
+
+  fullscreenEl = el("div", "ff-lm-fs");
+  fullscreenEl.setAttribute("role", "dialog");
+  fullscreenEl.setAttribute("aria-modal", "true");
+  fullscreenEl.setAttribute("aria-label", "Flow diagram (full screen)");
+  fullscreenEl.setAttribute("tabindex", "-1");
+
+  const bar = el("div", "ff-lm-fs-bar");
+  bar.appendChild(el("div", "ff-lm-fs-title", "Flow diagram"));
+  const closeBtn = el("button", "ff-lm-btn-secondary", "✕ Close");
+  closeBtn.setAttribute("type", "button");
+  closeBtn.addEventListener("click", closeDiagramFullscreen);
+  bar.appendChild(closeBtn);
+  fullscreenEl.appendChild(bar);
+
+  const fsPane = el("div", "ff-lm-fs-pane");
+  fullscreenEl.appendChild(fsPane);
+
+  fullscreenEl.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDiagramFullscreen();
+  });
+
+  document.body.appendChild(fullscreenEl);
+  fullscreenEl.focus();
+  renderMermaid(graph, fsPane);
+}
+
+function closeDiagramFullscreen() {
+  if (fullscreenEl) { fullscreenEl.remove(); fullscreenEl = null; }
 }
 
 // Render the Mermaid diagram into a container, with graceful fallback.
