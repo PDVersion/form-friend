@@ -12,6 +12,7 @@ import { renderQuestions, renderFormInfo } from "./ui.js";
 import { generateUuid } from "./uuid.js";
 import { badgeNameIssue, badgeNameHasSpaces, deriveBadgeName } from "./badge.js";
 import { initGuide } from "./guide.js";
+import { initLogicMap } from "./logicmap.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -153,6 +154,8 @@ function refreshFromState() {
   state.questions = sortByOrder(fields.map(parseField));
   const nameMap = idToNameMap(state.questions);
   const numberMap = idToNumberMap(state.questions);
+  const logicBtn = document.getElementById("logic-map-btn");
+  if (logicBtn) logicBtn.disabled = state.questions.length === 0;
   const formMeta = (state.formObj && state.formObj[KEYS.form]) || {};
   $("form-name-input").value = formMeta.name || "";
   $("form-badge-input").value = formMeta.badge_name || "";
@@ -531,6 +534,9 @@ function init() {
 
   // On-screen user guide (button + first-visit auto-open).
   initGuide();
+
+  // Logic Map & Checker.
+  initLogicMap();
 
   // Initialise right panel to empty state on load.
   updateRightPanel();
