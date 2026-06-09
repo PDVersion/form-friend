@@ -299,3 +299,328 @@ textarea {
     max-height: 55vh;
   }
 }
+
+/* ──────────────────────────── Logic Map overlay ───────────────────────────
+   Full-screen overlay: a scrollable left-anchored panel + dim backdrop.     */
+
+.ff-lm-open {
+  overflow: hidden;
+}
+
+.ff-lm {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  font-family: inherit;
+}
+
+.ff-lm-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  cursor: pointer;
+}
+
+.ff-lm-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  width: 680px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.32);
+  pointer-events: auto;
+  overflow: hidden;
+  outline: none;
+}
+
+.ff-lm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.ff-lm-head-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ff-lm-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ff-lm-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.ff-lm-close {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.4rem;
+  flex-shrink: 0;
+}
+.ff-lm-close:hover { background: #f1f5f9; color: #0f172a; }
+
+.ff-lm-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── Sections ── */
+.ff-lm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ff-lm-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* ── Checker issues ── */
+.ff-lm-ok {
+  font-size: 0.85rem;
+  color: #16a34a;
+  font-weight: 600;
+  padding: 0.6rem 0;
+}
+
+.ff-lm-issue {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid transparent;
+  font-size: 0.82rem;
+}
+
+.ff-lm-issue-tag {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 0.05rem;
+  width: 1.1rem;
+  text-align: center;
+}
+
+.ff-lm-issue-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ff-lm-issue-header {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ff-lm-issue-msg {
+  color: #334155;
+  line-height: 1.45;
+}
+
+.ff-lm-sev-error {
+  background: #fff1f2;
+  border-left-color: #f43f5e;
+}
+.ff-lm-sev-error .ff-lm-issue-tag { color: #e11d48; }
+
+.ff-lm-sev-warn {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+.ff-lm-sev-warn .ff-lm-issue-tag { color: #d97706; }
+
+.ff-lm-sev-info {
+  background: #f0f9ff;
+  border-left-color: #38bdf8;
+}
+.ff-lm-sev-info .ff-lm-issue-tag { color: #0284c7; }
+
+/* ── Map text view ── */
+.ff-lm-map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.ff-lm-map-label {
+  font-size: 0.8rem;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ff-lm-map-select {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.ff-lm-map-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.ff-lm-map-empty {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 0.4rem 0;
+}
+
+.ff-lm-map-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ff-lm-map-group-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ff-lm-map-dep-row {
+  font-size: 0.83rem;
+  color: #1e293b;
+  padding: 0.3rem 0.5rem;
+  background: #f8fafc;
+  border-radius: 0.4rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.ff-lm-hide-label {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+}
+
+.ff-lm-method-tag {
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.3rem;
+  letter-spacing: 0.04em;
+}
+.ff-lm-method-or {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ── Mermaid diagram ── */
+.ff-lm-diagram-toggle {
+  padding-top: 0.5rem;
+}
+
+.ff-lm-diagram-pane {
+  margin-top: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.ff-lm-diagram-svg {
+  overflow-x: auto;
+}
+.ff-lm-diagram-svg svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.ff-lm-mmd-source {
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.ff-lm-mmd-source summary {
+  cursor: pointer;
+  padding: 0.2rem 0;
+  color: #64748b;
+}
+
+.ff-lm-mmd-pre {
+  margin-top: 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.4rem;
+  padding: 0.6rem;
+  overflow-x: auto;
+  white-space: pre;
+  color: #334155;
+}
+
+/* ── Shared button styles ── */
+.ff-lm-btn-secondary {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+.ff-lm-btn-secondary:hover { background: #f1f5f9; }
+.ff-lm-btn-small { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
+
+/* ── Hidden utility ── */
+.ff-lm-hidden { display: none !important; }
+
+/* ── Small-screen: panel becomes a near-full-screen sheet ── */
+@media (max-width: 720px) {
+  .ff-lm-panel {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+  }
+}

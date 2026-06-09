@@ -36,6 +36,8 @@ import {
   deriveBadgeName,
   badgeNameIssue,
 } from "../js/badge.js";
+import { lintForm, SEV } from "../js/lint.js";
+import { buildFlowGraph, affectsOf, affectedByOf, toMermaid } from "../js/flow.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -297,6 +299,150 @@ ok("issue: empty badge returns a message", typeof badgeNameIssue("") === "string
 ok("issue: too-long badge returns a message", typeof badgeNameIssue("12345678901") === "string");
 ok("issue: valid badge returns null", badgeNameIssue("Audit") === null);
 ok("issue: 10-char badge returns null", badgeNameIssue("1234567890") === null);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: build minimal question view-models for linter/flow tests.
+function makeQ(overrides) {
+  return {
+    uuid: overrides.uuid || "00000000-0000-4000-8000-000000000001",
+    name: overrides.name || "Question",
+    type: overrides.type || "Text",
+    mandatory: overrides.mandatory || false,
+    method: overrides.method || "AND",
+    conditions: overrides.conditions || [],
+  };
+}
+
+console.log("\n[14] lintForm — clean form");
+const cleanForm = [
+  makeQ({ uuid: "aaaa0001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "aaaa0002-0000-4000-8000-000000000000", name: "Q2",
+    conditions: [{ ref: "aaaa0001-0000-4000-8000-000000000000", op: "EQ", value: "yes" }] }),
+];
+ok("clean form: no lint issues", lintForm(cleanForm).length === 0,
+  JSON.stringify(lintForm(cleanForm)));
+
+console.log("\n[15] lintForm — duplicate rule");
+const dupForm = [
+  makeQ({ uuid: "bbbb0001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "bbbb0002-0000-4000-8000-000000000000", name: "Q2",
+    conditions: [
+      { ref: "bbbb0001-0000-4000-8000-000000000000", op: "EQ", value: "yes" },
+      { ref: "bbbb0001-0000-4000-8000-000000000000", op: "EQ", value: "yes" },
+    ] }),
+];
+{
+  const issues = lintForm(dupForm);
+  ok("duplicate flagged", issues.some((i) => i.code === "duplicate"),
+    JSON.stringify(issues.map((i) => i.code)));
+  ok("duplicate severity is info", issues.find((i) => i.code === "duplicate")?.severity === SEV.info);
+}
+
+console.log("\n[16] lintForm — AND contradiction");
+const contradictForm = [
+  makeQ({ uuid: "cccc0001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "cccc0002-0000-4000-8000-000000000000", name: "Q2",
+    method: "AND",
+    conditions: [
+      { ref: "cccc0001-0000-4000-8000-000000000000", op: "EQ", value: "yes" },
+      { ref: "cccc0001-0000-4000-8000-000000000000", op: "EQ", value: "no" },
+    ] }),
+];
+{
+  const issues = lintForm(contradictForm);
+  ok("AND contradiction flagged", issues.some((i) => i.code === "contradiction"),
+    JSON.stringify(issues.map((i) => i.code)));
+  ok("contradiction severity is warning", issues.find((i) => i.code === "contradiction")?.severity === SEV.warning);
+}
+
+console.log("\n[17] lintForm — OR tautology");
+const tautForm = [
+  makeQ({ uuid: "dddd0001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "dddd0002-0000-4000-8000-000000000000", name: "Q2",
+    method: "OR",
+    conditions: [
+      { ref: "dddd0001-0000-4000-8000-000000000000", op: "EQ", value: "x" },
+      { ref: "dddd0001-0000-4000-8000-000000000000", op: "NEQ", value: "x" },
+    ] }),
+];
+{
+  const issues = lintForm(tautForm);
+  ok("OR tautology flagged", issues.some((i) => i.code === "tautology"),
+    JSON.stringify(issues.map((i) => i.code)));
+  ok("tautology severity is warning", issues.find((i) => i.code === "tautology")?.severity === SEV.warning);
+}
+
+console.log("\n[18] lintForm — subsumption");
+const subForm = [
+  makeQ({ uuid: "eeee0001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "eeee0002-0000-4000-8000-000000000000", name: "Q2",
+    method: "OR",
+    conditions: [
+      { ref: "eeee0001-0000-4000-8000-000000000000", op: "GT", value: "5" },
+      { ref: "eeee0001-0000-4000-8000-000000000000", op: "GT", value: "10" },
+    ] }),
+];
+{
+  const issues = lintForm(subForm);
+  ok("subsumption flagged (GT 10 subsumed by GT 5 under OR)", issues.some((i) => i.code === "subsumption"),
+    JSON.stringify(issues.map((i) => i.code)));
+}
+
+console.log("\n[19] lintForm — required-hideable");
+const reqHideForm = [
+  makeQ({ uuid: "ffff0001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "ffff0002-0000-4000-8000-000000000000", name: "Q2",
+    mandatory: true,
+    conditions: [{ ref: "ffff0001-0000-4000-8000-000000000000", op: "EQ", value: "yes" }] }),
+];
+{
+  const issues = lintForm(reqHideForm);
+  ok("required-hideable flagged", issues.some((i) => i.code === "required-hideable"),
+    JSON.stringify(issues.map((i) => i.code)));
+  ok("required-hideable severity is warning", issues.find((i) => i.code === "required-hideable")?.severity === SEV.warning);
+}
+
+console.log("\n[20] lintForm — structural errors passed through");
+const brokenRefForm = [
+  makeQ({ uuid: "gggg0001-0000-4000-8000-000000000000", name: "Q1",
+    conditions: [{ ref: "deadbeef-0000-4000-8000-000000000000", op: "EQ", value: "x" }] }),
+];
+{
+  const issues = lintForm(brokenRefForm);
+  ok("structural broken ref flagged via conditionIssues", issues.some((i) => i.code === "structural"),
+    JSON.stringify(issues.map((i) => i.code)));
+  ok("structural severity is error", issues.find((i) => i.code === "structural")?.severity === SEV.error);
+}
+
+console.log("\n[21] buildFlowGraph — nodes and edges");
+const graphQs = [
+  makeQ({ uuid: "h001-0000-4000-8000-000000000000", name: "Q1" }),
+  makeQ({ uuid: "h002-0000-4000-8000-000000000000", name: "Q2" }),
+  makeQ({ uuid: "h003-0000-4000-8000-000000000000", name: "Q3",
+    conditions: [{ ref: "h001-0000-4000-8000-000000000000", op: "EQ", value: "yes" }] }),
+];
+{
+  const g = buildFlowGraph(graphQs);
+  ok("3 nodes", g.nodes.length === 3);
+  ok("1 well-formed edge", g.edges.filter((e) => !e.broken).length === 1);
+  const edge = g.edges.find((e) => !e.broken);
+  ok("edge from Q1 to Q3", edge && edge.fromNum === 1 && edge.toNum === 3);
+  ok("edge label contains op text", edge && edge.label.includes("equals"));
+  ok("affectsOf Q1 returns Q3", affectsOf(g, "h001-0000-4000-8000-000000000000").some((a) => a.num === 3));
+  ok("affectedByOf Q3 returns Q1", affectedByOf(g, "h003-0000-4000-8000-000000000000").some((a) => a.num === 1));
+  ok("affectsOf Q2 returns empty", affectsOf(g, "h002-0000-4000-8000-000000000000").length === 0);
+}
+
+console.log("\n[22] toMermaid — snapshot");
+{
+  const g = buildFlowGraph(graphQs);
+  const mmd = toMermaid(g);
+  ok("mermaid starts with flowchart LR", mmd.startsWith("flowchart LR"));
+  ok("mermaid contains Q1 node", mmd.includes("Q1"));
+  ok("mermaid contains Q3 node", mmd.includes("Q3"));
+  ok("mermaid contains dashed hides edge", mmd.includes("-. ") && mmd.includes("hides when"));
+  ok("mermaid has classDef mandatory", mmd.includes("classDef mandatory"));
+}
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

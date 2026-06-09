@@ -19,6 +19,18 @@
       referrerpolicy="no-referrer"
     ></script>
 
+    <!-- Mermaid for the Logic Map flow diagram (optional; text view works without it). -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      if (window.mermaid) {
+        window.mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "loose" });
+      }
+    </script>
+
     <link rel="stylesheet" href="css/app.css" />
   </head>
 
@@ -34,6 +46,12 @@
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
+            <button
+              id="logic-map-btn"
+              class="rounded-md border border-violet-300 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Open the Logic Map & Checker — see how conditions hide questions and catch logic errors"
+              disabled
+            >🔍 Logic map</button>
             <button
               id="user-guide-btn"
               class="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
